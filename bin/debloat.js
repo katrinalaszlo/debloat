@@ -23,6 +23,9 @@ const BASE_ESTIMATES = [
 
 const est = (chars) => Math.round(chars / 4);
 const fmt = (n) => (n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n));
+// End-truncate with an ellipsis so a cut identifier never reads as a different,
+// still-plausible one (e.g. "setup-browser-cookies" -> "setup-browser-cookie").
+const truncName = (s, max) => (s.length <= max ? s : s.slice(0, max - 1) + "…");
 
 // Styling: TTY-only (or --color to force), respects NO_COLOR and --no-color.
 // Styles wrap whole padded lines so ANSI codes never break column math.
@@ -306,7 +309,7 @@ function renderSkillList(rows) {
   const never = rows.filter((r) => r.count === 0);
   const used = rows.filter((r) => r.count > 0);
   const tok = never.reduce((s, r) => s + r.tokens, 0);
-  const row = (r) => " " + r.slug.slice(0, 31).padEnd(32) + String(r.tokens).padStart(6) + "  " + fmtAgo(r.last);
+  const row = (r) => " " + truncName(r.slug, 31).padEnd(32) + String(r.tokens).padStart(6) + "  " + fmtAgo(r.last);
   console.log();
   console.log(" SKILLS — startup cost vs actual usage (user scope)");
   console.log(" tokens = est. context each skill adds to EVERY session (chars÷4)");
@@ -379,7 +382,7 @@ function skillsCommand() {
   const green = (s) => (color ? `\x1b[32m${s}\x1b[0m` : s);
   const CELL = 27; // 20-char name + space + 4-char token + 2-space gutter
   const cols = Math.max(1, Math.floor(((process.stdout.columns || 80) - 3) / CELL));
-  const cell = (r) => r.slug.slice(0, 20).padEnd(21) + dim(String(r.tokens).padStart(4) + " tok");
+  const cell = (r) => truncName(r.slug, 20).padEnd(21) + dim(String(r.tokens).padStart(4) + " tok");
   const grid = (list) => { for (let i = 0; i < list.length; i += cols) console.log("   " + list.slice(i, i + cols).map(cell).join("  ")); };
   const recTok = rec.reduce((s, r) => s + r.tokens, 0);
 
@@ -389,7 +392,7 @@ function skillsCommand() {
   const total = startupTotalTokens(process.cwd());
   if (rec.length) {
     const BW = 26;
-    const bar = (t) => "█".repeat(Math.max(1, Math.round((t / total) * BW))).padEnd(BW);
+    const bar = (t) => "█".repeat(t === 0 ? 0 : Math.max(1, Math.round((t / total) * BW))).padEnd(BW);
     const lbl = (s) => "   " + s.padEnd(16);
     console.log();
     console.log(" " + red("⚡ " + bold(fmt(recTok) + " tokens")) + ` loaded every session on ${rec.length} skills you've never run`);
@@ -593,7 +596,7 @@ function receipt() {
       else cats.instructions += t;
     }
     const BW = 26;
-    const cbar = (t) => "█".repeat(Math.max(1, Math.round((t / total) * BW))).padEnd(BW);
+    const cbar = (t) => "█".repeat(t === 0 ? 0 : Math.max(1, Math.round((t / total) * BW))).padEnd(BW);
     const crow = (label, t, paintFn, approx = "") =>
       console.log("   " + label.padEnd(18) + (paintFn ? paintFn(cbar(t)) : cbar(t)) + "  " + (approx + fmt(t)).padStart(6));
     crow("claude code base", cats.base, dim, "~");
